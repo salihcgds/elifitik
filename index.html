@@ -129,7 +129,7 @@
       ctx.fillStyle = "#fff";
       ctx.font = "bold 24px Arial";
       ctx.fillText("Skor: " + score, 20, 40);
-      ctx.fillText("En Yüksek:" + highScore, 20, 70);
+      ctx.fillText("En Yüksek: " + highScore, 20, 70);
     }
 
     function endGame() {
@@ -140,7 +140,7 @@
       }
 
       document.getElementById("startText").textContent =
-        "Oyun Bitti!\nSkor:248" + score + "\nEn Yüksek: " + highScore + "\nTekrar başlamak için dokun";
+        "Oyun Bitti!\nSkor: " + score + "\nEn Yüksek: " + highScore + "\nTekrar başlamak için dokun";
       document.getElementById("startText").style.display = "block";
       firstTapDone = false;
     }
