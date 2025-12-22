@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Flappy Bird - Pembe</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: linear-gradient(to bottom, #ffc0cb, #ffe4e1);
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      background: transparent;
+    }
+
+    #startText {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: Arial, sans-serif;
+      font-size: 24px;
+      color: #fff;
+      background: rgba(255, 105, 180, 0.8);
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      white-space: pre-line;
+    }
+  </style>
+</head>
+<body>
+  <div id="startText">Başlamak için ekrana dokun</div>
+  <canvas id="gameCanvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let bird = {
+      x: 50,
+      y: canvas.height / 2,
+      width: 40,
+      height: 40,
+      gravity: 0.6,
+      lift: -8,
+      velocity: 0,
+      img: new Image()
+    };
+    bird.img.src = "foto.png";
+
+    let pipes = [];
+    const pipeWidth = 60;
+    const pipeGap = 180;
+    let gameStarted = false;
+    let gameOver = false;
+    let score = 0;
+    let highScore = localStorage.getItem("highScore") ||0;
+    let firstTapDone = false;
+
+    function drawBird() {
+      ctx.drawImage(bird.img, bird.x, bird.y, bird.width, bird.height);
+    }
+
+    function drawPipes() {
+      ctx.fillStyle = "#ff69b4";
+      pipes.forEach(pipe => {
+        ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
+        ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, canvas.height - pipe.bottom);
+      });
+    }
+
+    function updateBird() {
+      bird.velocity += bird.gravity;
+      bird.y += bird.velocity;
+
+      if (bird.y + bird.height > canvas.height || bird.y < 0) {
+        endGame();
+      }
+    }
+
+    function updatePipes() {
+      pipes.forEach(pipe => {
+        pipe.x -= 3;
+
+        if (!pipe.passed && pipe.x + pipeWidth < bird.x) {
+          score++;
+          pipe.passed = true;
+        }
+
+        if (
+          bird.x < pipe.x + pipeWidth &&
+          bird.x + bird.width > pipe.x &&
+          (bird.y < pipe.top || bird.y + bird.height > pipe.bottom)
+        ) {
+          endGame();
+        }
+      });
+
+      if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 300) {
+        const top = Math.random() * (canvas.height - pipeGap - 100) + 50;
+        pipes.push({
+          x: canvas.width,
+          top: top,
+          bottom: top + pipeGap,
+          passed: false
+        });
+      }
+
+      if (pipes.length && pipes[0].x + pipeWidth < 0) {
+        pipes.shift();
+      }
+    }
+
+    function drawScore() {
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 24px Arial";
+      ctx.fillText("Skor: " + score, 20, 40);
+      ctx.fillText("En Yüksek:2289294" + highScore, 20, 70);
+    }
+
+    function endGame() {
+      gameOver = true;
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem("highScore", highScore);
+      }
+
+      document.getElementById("startText").textContent =
+        "Oyun Bitti!\nSkor:248" + score + "\nEn Yüksek: " + highScore + "\nTekrar başlamak için dokun";
+      document.getElementById("startText").style.display = "block";
+      firstTapDone = false;
+    }
+
+    function resetGame() {
+      bird.y = canvas.height / 2;
+      bird.velocity = 0;
+      pipes = [];
+      score = 0;
+      gameOver = false;
+    }
+
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBird();
+      drawPipes();
+      updateBird();
+      updatePipes();
+      drawScore();
+
+      if (!gameOver) {
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    function handleTouch() {
+      if (!gameStarted) {
+        gameStarted = true;
+        document.getElementById("startText").style.display = "none";
+        resetGame();
+        gameLoop();
+        return;
+      }
+
+      if (gameOver) {
+        gameStarted = false;
+        document.getElementById("startText").textContent = "Başlamak için ekrana dokun";
+        return;
+      }
+
+      if (!firstTapDone) {
+        // İlk zıplamayı engelle
+        firstTapDone = true;
+        return;
+      }
+
+      bird.velocity = bird.lift;
+    }
+
+    window.addEventListener("touchstart", handleTouch);
+    window.addEventListener("mousedown", handleTouch);
+  </script>
+</body>
+</html>
