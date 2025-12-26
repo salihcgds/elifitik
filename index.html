@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Elify Bird - Pembe</title>
+
+  <!-- Güncel EmailJS v4 -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script type="text/javascript">
+    (function() {
+      emailjs.init({
+        publicKey: "uFJK5hN9sIhg4TKEp"  // Dashboard > Account > General > Public Key
+      });
+    })();
+  </script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; background: linear-gradient(to bottom, #ffc0cb, #ffe4e1); }
+    canvas { display: block; width: 100vw; height: 100vh; background: transparent; image-rendering: pixelated; }
+
+    #overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      background: rgba(255, 105, 180, 0.85); color: white; font-family: Arial, sans-serif; z-index: 20;
+    }
+    #overlay h1 { font-size: 48px; margin-bottom: 20px; }
+    #overlay p { font-size: 22px; margin-bottom: 30px; }
+    #overlay input {
+      padding: 15px; font-size: 20px; width: 80%; max-width: 320px; border: none; border-radius: 12px;
+      text-align: center; margin-bottom: 40px;
+    }
+    #overlay button {
+      padding: 16px 60px; font-size: 26px; background: #ff69b4; color: white; border: none;
+      border-radius: 12px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    #gameOverText {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(255, 105, 180, 0.95); color: white; padding: 40px; border-radius: 20px;
+      text-align: center; font-size: 30px; white-space: pre-line; display: none; z-index: 15;
+      max-width: 90%;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- İsim Giriş Ekranı -->
+  <div id="overlay">
+    <h1>Elify Bird</h1>
+    <p>Lütfen ismini gir</p>
+    <input type="text" id="playerName" placeholder="İsmin" autocomplete="off" />
+    <button id="startButton">Oyuna Başla</button>
+  </div>
+
+  <!-- Oyun Bitti Ekranı -->
+  <div id="gameOverText"></div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    ctx.scale(dpr, dpr);
+
+    let playerName = "";
+    let bird = {
+      x: 80,
+      y: window.innerHeight / 2,
+      width: 50,
+      height: 50,
+      gravity: 0.6,
+      lift: -10,
+      velocity: 0,
+      img: new Image()
+    };
+    bird.img.src = "foto.png";  // Kuş fotoğrafın dosya adı
+
+    let pipes = [];
+    const pipeWidth = 70;
+    const pipeGap = 180;
+    let score = 0;
+    let highScore = parseInt(localStorage.getItem("elifyHighScore")) || 0;
+    let gameRunning = false;
+
+    function drawBird() {
+      ctx.save();
+      const centerX = bird.x + bird.width / 2;
+      const centerY = bird.y + bird.height / 2;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, bird.width / 2, 0, Math.PI * 2);
+      ctx.clip();
+
+      ctx.shadowColor = "rgba(0,0,0,0.3)";
+      ctx.shadowBlur = 10;
+      ctx.shadowOffsetY = 5;
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(bird.img, bird.x, bird.y, bird.width, bird.height);
+      ctx.restore();
+    }
+
+    function drawPipes() {
+      ctx.fillStyle = "#ff69b4";
+      pipes.forEach(pipe => {
+        ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
+        ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, canvas.height / dpr - pipe.bottom);
+      });
+    }
+
+    function updateBird() {
+      bird.velocity += bird.gravity;
+      bird.y += bird.velocity;
+      if (bird.y + bird.height > window.innerHeight || bird.y < 0) endGame();
+    }
+
+    function updatePipes() {
+      pipes.forEach(pipe => {
+        pipe.x -= 3;
+        if (!pipe.passed && pipe.x + pipeWidth < bird.x) {
+          score++;
+          pipe.passed = true;
+        }
+        if (
+          bird.x + bird.width > pipe.x &&
+          bird.x < pipe.x + pipeWidth &&
+          (bird.y < pipe.top || bird.y + bird.height > pipe.bottom)
+        ) {
+          endGame();
+        }
+      });
+
+      if (pipes.length === 0 || pipes[pipes.length - 1].x < window.innerWidth - 300) {
+        const min = 50;
+        const max = window.innerHeight - pipeGap - min;
+        const top = Math.floor(Math.random() * (max - min)) + min;
+        pipes.push({ x: window.innerWidth, top, bottom: top + pipeGap, passed: false });
+      }
+
+      if (pipes[0] && pipes[0].x + pipeWidth < 0) pipes.shift();
+    }
+
+    function drawScore() {
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 48px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(score, window.innerWidth / 2, 100);
+    }
+
+    function gameLoop() {
+      if (!gameRunning) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawPipes();
+      drawBird();
+      updatePipes();
+      updateBird();
+      drawScore();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function endGame() {
+      gameRunning = false;
+
+      let newRecord = false;
+      if (score > highScore) {
+        newRecord = true;
+        highScore = score;
+        localStorage.setItem("elifyHighScore", highScore);
+      }
+
+      document.getElementById("gameOverText").style.display = "block";
+      document.getElementById("gameOverText").textContent =
+        `Oyun Bitti!\n\n${playerName || "Oyuncu"}\nSkorun: ${score}\nEn Yüksek: \( {highScore} \){newRecord ? "\n\nYENİ REKOR! 🎉" : ""}\n\nTekrar oynamak için dokun`;
+
+      // SADECE YENİ REKOR KIRILINCA MAIL GÖNDER
+      if (newRecord) {
+        const params = {
+          player_name: playerName || "Adsız Oyuncu",
+          score: score,
+          high_score: highScore,
+          date: new Date().toLocaleString('tr-TR')
+        };
+
+        emailjs.send("service_dd703qe", "template_tm8mwaf", params)
+          .then(() => {
+            console.log("Yeni rekor maili başarıyla gönderildi!");
+          })
+          .catch((error) => {
+            console.error("Mail gönderilemedi:", error);
+          });
+      }
+    }
+
+    function startNewGame() {
+      bird.y = window.innerHeight / 2;
+      bird.velocity = 0;
+      pipes = [];
+      score = 0;
+      gameRunning = true;
+      document.getElementById("gameOverText").style.display = "none";
+      gameLoop();
+    }
+
+    function handleJump(e) {
+      e.preventDefault();
+      if (gameRunning) {
+        bird.velocity = bird.lift;
+      } else if (document.getElementById("gameOverText").style.display === "block") {
+        startNewGame();
+      }
+    }
+
+    // Oyuna başlama butonu
+    document.getElementById("startButton").onclick = function() {
+      playerName = document.getElementById("playerName").value.trim();
+      if (!playerName) playerName = "Adsız Oyuncu";
+      document.getElementById("overlay").style.display = "none";
+      startNewGame();
+    };
+
+    // Dokunma ve tıklama olayları
+    canvas.addEventListener("touchstart", handleJump, { passive: false });
+    canvas.addEventListener("mousedown", handleJump);
+
+    // Ekran boyutu değişirse
+    window.addEventListener("resize", () => {
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      ctx.scale(dpr, dpr);
+      bird.y = window.innerHeight / 2;
+    });
+  </script>
+</body>
+</html>
