@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Elify Bird - Pembe</title>
 
-  <!-- Güncel EmailJS v4 -->
+  <!-- Güncel EmailJS v4 (2025) -->
   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script type="text/javascript">
     (function() {
@@ -46,7 +46,6 @@
 </head>
 <body>
 
-  <!-- İsim Giriş Ekranı -->
   <div id="overlay">
     <h1>Elify Bird</h1>
     <p>Lütfen ismini gir</p>
@@ -54,7 +53,6 @@
     <button id="startButton">Oyuna Başla</button>
   </div>
 
-  <!-- Oyun Bitti Ekranı -->
   <div id="gameOverText"></div>
 
   <canvas id="gameCanvas"></canvas>
@@ -78,7 +76,7 @@
       velocity: 0,
       img: new Image()
     };
-    bird.img.src = "foto.png";  // Kuş fotoğrafın dosya adı
+    bird.img.src = "foto.png";
 
     let pipes = [];
     const pipeWidth = 70;
@@ -114,16 +112,20 @@
     function updateBird() {
       bird.velocity += bird.gravity;
       bird.y += bird.velocity;
-      if (bird.y + bird.height > window.innerHeight || bird.y < 0) endGame();
+      if (bird.y + bird.height > window.innerHeight || bird.y < 0) {
+        endGame();
+      }
     }
 
     function updatePipes() {
       pipes.forEach(pipe => {
         pipe.x -= 3;
+
         if (!pipe.passed && pipe.x + pipeWidth < bird.x) {
           score++;
           pipe.passed = true;
         }
+
         if (
           bird.x + bird.width > pipe.x &&
           bird.x < pipe.x + pipeWidth &&
@@ -134,13 +136,18 @@
       });
 
       if (pipes.length === 0 || pipes[pipes.length - 1].x < window.innerWidth - 300) {
-        const min = 50;
-        const max = window.innerHeight - pipeGap - min;
-        const top = Math.floor(Math.random() * (max - min)) + min;
-        pipes.push({ x: window.innerWidth, top, bottom: top + pipeGap, passed: false });
+        let top = Math.floor(Math.random() * (window.innerHeight - pipeGap - 100)) + 50;
+        pipes.push({
+          x: window.innerWidth,
+          top: top,
+          bottom: top + pipeGap,
+          passed: false
+        });
       }
 
-      if (pipes[0] && pipes[0].x + pipeWidth < 0) pipes.shift();
+      if (pipes.length > 0 && pipes[0].x + pipeWidth < 0) {
+        pipes.shift();
+      }
     }
 
     function drawScore() {
@@ -152,12 +159,15 @@
 
     function gameLoop() {
       if (!gameRunning) return;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
       drawPipes();
       drawBird();
       updatePipes();
       updateBird();
       drawScore();
+
       requestAnimationFrame(gameLoop);
     }
 
@@ -175,7 +185,6 @@
       document.getElementById("gameOverText").textContent =
         `Oyun Bitti!\n\n${playerName || "Oyuncu"}\nSkorun: ${score}\nEn Yüksek: \( {highScore} \){newRecord ? "\n\nYENİ REKOR! 🎉" : ""}\n\nTekrar oynamak için dokun`;
 
-      // SADECE YENİ REKOR KIRILINCA MAIL GÖNDER
       if (newRecord) {
         const params = {
           player_name: playerName || "Adsız Oyuncu",
@@ -185,8 +194,8 @@
         };
 
         emailjs.send("service_dd703qe", "template_tm8mwaf", params)
-          .then(() => {
-            console.log("Yeni rekor maili başarıyla gönderildi!");
+          .then((response) => {
+            console.log("Mail başarıyla gönderildi!", response.status, response.text);
           })
           .catch((error) => {
             console.error("Mail gönderilemedi:", error);
@@ -213,7 +222,6 @@
       }
     }
 
-    // Oyuna başlama butonu
     document.getElementById("startButton").onclick = function() {
       playerName = document.getElementById("playerName").value.trim();
       if (!playerName) playerName = "Adsız Oyuncu";
@@ -221,11 +229,9 @@
       startNewGame();
     };
 
-    // Dokunma ve tıklama olayları
     canvas.addEventListener("touchstart", handleJump, { passive: false });
     canvas.addEventListener("mousedown", handleJump);
 
-    // Ekran boyutu değişirse
     window.addEventListener("resize", () => {
       canvas.width = window.innerWidth * dpr;
       canvas.height = window.innerHeight * dpr;
@@ -234,4 +240,4 @@
     });
   </script>
 </body>
-</html>
+  </html>
